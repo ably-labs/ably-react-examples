@@ -62,15 +62,70 @@ The same caveat to using API keys applies here, as it does to the previous sampl
 
 ## Where do I put Ably code in my (Classical?) components?
 
-Yes! Create channels in constructors, and register on componentDidMount / unreigster on componentDidUnmount
+Our `ably-react-example-basic` shows how you can use classical components to call the ably SDK.
+
+If you're using purely `presentational componenets` you might want to manage the ably SDK in a `higher order component` that passes message contents to the `presentational componenets` as props.
+
+It's recommended to create the ably client and channels in the portions of your application that use them. If your entire application uses `Ably`, you probably want to define it higher up - maybe even in the App itself, and reuse messages, or channels to prevent opening lots of connections.
+
+Keep in mind, that whenever you create a client and subscribe to a channel, a connection to ably will be opened, that counts towards your connection limits.
 
 ## I'm using a state manager - like redux - how do I get my Ably code into my app?
 
-Not really related, ably manages it's own state, you probably don't want these two things mixing directly.
+You could always create and manage the Ably client external to your application, and use a state management solution like `Redux` to emit events.
+While this is probably more complicated, you could always subscribe to channels, and raise events in your state management store, and have the store cascade these events to the other components in your application that are connected to the store.
+
+It's hard to give concerete advice around this topic, because applications can be built in different ways, but if you have any specific questions, please contact support.
 
 ## I think I'm opening multiple connections?
 
-Probably because you're not managing useState or componentDidMount correctly
+There are a few obvious reasons that this might happen:
+
+1. You're using react classical components, and not unsubscribing in `componentWillUnmount()`
+2. You're using react functional componenets and you haven't returned a cleanup function that unsubscribes during a call to `useEffect`
+3. You're in development mode using hot reload
+
+If you want to make sure you're doing the first two of these correctly, please check the samples `ably-react-example-basic` and `ably-react-example-functional`.
+
+The third is a little more tricky.
+
+Hot reload replaces portions or all of your site during development mode. This is great for productivity, but the Ably SDK might get itself pretty confused if JavaScript code is hot reloaded underneath it - effectively "reloading" the browser tab, even if it doesn't look like that's what is happening to human eyes.
+
+When this happens, your ably code will re-run (possibly) and probably reconnect. On the server side, we have a 2-minute window for connections that appear to have dropped to time-out. This means that if you connect with the javascript SDK, then change your markup and hot-reload, you might not even realise you've just reconnected.
+
+In fact, you might not even realise you're using tools that employ hot-reload - as they're bundled into common front end toolchains like Create React app, WebPack dev server, and live-server.
+
+This is a tricky problem, because you're reconnecting!
+
+If you find this is happening to you during dev, and you're constantly hitting your ably connection limits, we'd recommend stubbing out the Ably SDK with a mock of some kind.
+
+Mocking and stubbing, at least in the browser, is when you create a new JavaScript object that matches the function signatures of our SDKs, but actually doesn't call Ably at all. Mocks and stubs are great for testing, as you can add your own logic to simulate messages, and capture the output of messages that **would** have been sent if you were using our real SDKs.
+
+Here's an example of an stubbed implementation of `Ably/Promises` that we occasionally use in tests, to verify the behaviour of Ably, and you could use to make sure you are not using up all your connection limits during development.
+
+```js
+const fakeAblyChannel = {
+  published: [],
+  subscribe: function(callback) {
+      this.callback = callback;
+  },
+  publish: function(message) {
+      this.published.push(message);
+      this.callback(message);
+  }
+}
+
+class AblyStub {
+  fakeAblyChannel = fakeAblyChannel;
+  connection = { on: function(string) { } };
+  channels = { get: function(chName) { return fakeAblyChannel; } }
+}
+
+window.Ably = { Realtime: { Promise: AblyStub } };
+```
+
+All this stub does, is push any messages that are sent to an internal array called `published`, and simulates a subscription to any ably channel.
+You can use this stub like our normal SDK for publishing and subscribing, and it'll **loosely** behave the same.
 
 ## Notes
 
