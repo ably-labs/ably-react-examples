@@ -37,7 +37,28 @@ Please note - in our example we have the Ably API key in the constructor call to
 
 ## Can I put ably code in my react functional components?
 
-Yes, but you need to useState correctly (I forget how we did that, but we can work it out again)
+Yes! You can do all the things from our `ably-react-example-basic` using `functional components` instead of `classical componenets`.
+
+We've converted the example above into a `functional componenet` in the directory `ably-react-example-functional` so you can see how that would look. At a glance, it's a little more confusing to look at - but if you're comfortable with functional components, it shouldn't be too surprising.
+
+In it, we:
+
+- Create our functional component
+- Create an instance of the ably client, and our channel inside the function.
+- Define variable using `useState` called `messages`, along with it's corresponding `updateMessages` function.
+- We then use `useEffect` to manage our subscriptions.
+- Three important things are happening in here
+    - Subscribing to our channel, along with a callback that updates our messages by calling `updateMessages`.
+    - The subscription function is wrapped and called `async` to prevent race conditions in react, so we're calling it using `subscribe()` inside of the `useEffect` callback.
+    - We're returning a `cleanup` function, that unsubscribes from our channel.
+
+- We've converted our sendMessage function syntax to use the form `const sendMessage = () => { ... }` rather than `function sendMessage` so that we can define it in the body of our functional component.
+- The rest of the code remains unchanged.
+
+Much like the first example, it's important to ensure that your `cleanup` function contains an `unsubscribe` call, so you don't leak ably connections.
+
+The same caveat to using API keys applies here, as it does to the previous sample - please use TokenAuthentication.
+
 
 ## Where do I put Ably code in my (Classical?) components?
 
