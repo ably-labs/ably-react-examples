@@ -4,10 +4,9 @@ import { useState } from 'react';
 import './App.css';
 import AblyMessageComponent from './components/AblyMessageComponent.js'
 
-
 function App() {
   
-  const [ enabled, toggle ] = useState(false);
+  const [ enabled, toggle ] = useState(true);
   const messaging = enabled ? (<AblyMessageComponent />) : (<div></div>);
 
   return (
@@ -17,7 +16,7 @@ function App() {
       </header>
       <label htmlFor="useably">Use Ably?</label>
       <input name="useably" type="checkbox" onChange={() => toggle(!enabled)}></input>      
-      { messaging }    
+      { messaging }
     </div>
   );
 }

@@ -83,19 +83,99 @@ There are a few obvious reasons that this might happen:
 
 1. You're using react classical components, and not unsubscribing in `componentWillUnmount()`
 2. You're using react functional componenets and you haven't returned a cleanup function that unsubscribes during a call to `useEffect`
-3. You're in development mode using hot reload
+3. You're using a component that subscribes to a channel, which you use for multiple things, and your Ably Client is defined *inside* that component
 
 If you want to make sure you're doing the first two of these correctly, please check the samples `ably-react-example-basic` and `ably-react-example-functional`.
 
-The third is a little more tricky.
+The third is subtle and tricky.
 
-Hot reload replaces portions or all of your site during development mode. This is great for productivity, but the Ably SDK might get itself pretty confused if JavaScript code is hot reloaded underneath it - effectively "reloading" the browser tab, even if it doesn't look like that's what is happening to human eyes.
+Imagine you have a react component that looks like this:
 
-When this happens, your ably code will re-run (possibly) and probably reconnect. On the server side, we have a 2-minute window for connections that appear to have dropped to time-out. This means that if you connect with the javascript SDK, then change your markup and hot-reload, you might not even realise you've just reconnected.
+```js
+export default class AblyMessageComponent extends React.Component {
+    constructor() {
+        super();
+        this.state = { messages: [] };
+        this.client = new Ably.Realtime("ably-api-key-here");
+    }
 
-In fact, you might not even realise you're using tools that employ hot-reload - as they're bundled into common front end toolchains like Create React app, WebPack dev server, and live-server.
+    async componentDidMount() {
+        this.channel = await this.client.channels.get("my-cool-channel");
 
-This is a tricky problem, because you're reconnecting!
+        await this.channel.subscribe(message => {
+            console.log("A message was received", message);
+
+            this.state.messages.push(message.data.text);
+            this.setState({ messages: this.state.messages });
+        });
+
+        console.log("You are subscribed");
+    }
+
+    async componentWillUnmount() {
+        this.channel.unsubscribe();
+
+        console.log("You are unsubscribed");
+    }
+
+    sendMessage() {
+        this.channel.publish({ name: "myEventName", data: { text: "Some random stuff here." } })
+    }
+
+    render() {
+        return (
+            <main>
+                <button onClick={ (e) => this.sendMessage(e) }>Click here to send a message</button>
+                <h2>Messages will appear here:</h2>
+                <ul>
+                    {this.state.messages.map((text, index) => (<li key={"item" + index}>{text}</li>))}
+                </ul>
+            </main>
+        )
+    }
+}
+```
+This seems sane - it's a component that connects to ably, and subscribes to a channel.
+If you pay close attention, you'll notice that we're creating an instance of the Ably.Realtime client in the constructor of the component in a way that could cause an issue in your application.
+
+If you were to use this component multiple times in your web application (for example, to render the current price of some stocks for multiple stocks/share prices), what would actually happen is a new ably connection would be opened for each subscription, quickly using up your connection limit.
+
+By making a subtle change to this component like this...
+
+```js
+
+const client = new Ably.Realtime("ably-api-key-here");
+
+export default class AblyMessageComponent extends React.Component {
+    constructor() {
+        super();
+        this.state = { messages: [] };
+    }
+
+    async componentDidMount() {
+        this.channel = await client.channels.get("my-cool-channel");
+
+        await this.channel.subscribe(message => {
+            console.log("A message was received", message);
+
+            this.state.messages.push(message.data.text);
+            this.setState({ messages: this.state.messages });
+        });
+
+        console.log("You are subscribed");
+    }
+....
+```
+and defining the `client` outside of the scope of the `React.Component`, the same client instance - and as such - the same `web socket connection`, would be shared by all instances of that component.
+That's totally fine, and each components subscription would still operate independently, but you would not run out of connections if you rendered this component many times on one page.
+
+
+## Thoughts about hot reload that might kinda only be half right.
+
+If you're in development mode, using hot-reload, you may make this issue even worse.
+Hot reload replaces portions or all of your site during development mode. This is great for productivity - effectively "reloading" the browser tab, or portions of the browser tab, right in front of you, even if it doesn't look like that's what is happening to human eyes.
+
+If you hot-reload a React component (or just a webpage) that contains code that connects to Ably, your ably connection will be rapidly disconnected and reconnected as part of the reload - if you've made the mistake above, and are already opening lots of connections inside of React components, you might find that hot reload rapidly uses up your connection limits.
 
 If you find this is happening to you during dev, and you're constantly hitting your ably connection limits, we'd recommend stubbing out the Ably SDK with a mock of some kind.
 

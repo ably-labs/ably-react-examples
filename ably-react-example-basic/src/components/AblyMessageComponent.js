@@ -1,7 +1,7 @@
 import React from 'react'
 import Ably from "ably/promises";
 
-const client = new Ably.Realtime("my-ably-api-key");
+const client = new Ably.Realtime("UeA-gA.7_OuZQ:0d-djBnnpwBMkxXc");
 
 export default class AblyMessageComponent extends React.Component {
     
@@ -37,7 +37,7 @@ export default class AblyMessageComponent extends React.Component {
         return (
             <main>
                 <button onClick={ (e) => this.sendMessage(e) }>Click here to send a message</button>
-                <h2>Messages will go here:</h2>
+                <h2>Messages will appear here:</h2>
                 <ul> 
                     {this.state.messages.map((text, index) => (<li key={"item" + index}>{text}</li>))}
                 </ul>

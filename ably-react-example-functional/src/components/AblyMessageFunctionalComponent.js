@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Ably from "ably/promises";
 
+const client = new Ably.Realtime("you-api-key-here");
+
 const Component = (props) => {
 
-    const client = new Ably.Realtime("you-api-key-here");
-    const channel = client.channels.get('some-channel');    
-    
+    const channel = client.channels.get('some-channel');
     const [ messages, updateMessages ] = useState([]);
 
     useEffect(() => {
