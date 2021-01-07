@@ -170,7 +170,7 @@ and defining the `client` outside of the scope of the `React.Component`, the sam
 That's totally fine, and each components subscription would still operate independently, but you would not run out of connections if you rendered this component many times on one page.
 
 
-## Thoughts about hot reload that might kinda only be half right.
+## Thoughts about hot reload
 
 If you're in development mode, using hot-reload, you may make this issue even worse.
 Hot reload replaces portions or all of your site during development mode. This is great for productivity - effectively "reloading" the browser tab, or portions of the browser tab, right in front of you, even if it doesn't look like that's what is happening to human eyes.
@@ -206,14 +206,3 @@ window.Ably = { Realtime: { Promise: AblyStub } };
 
 All this stub does, is push any messages that are sent to an internal array called `published`, and simulates a subscription to any ably channel.
 You can use this stub like our normal SDK for publishing and subscribing, and it'll **loosely** behave the same.
-
-## Notes
-
-Hello, I have an issue but I'm not sure what is causing it. I received an email telling I reached the thousands of messages on my app but I barely posted more than 100 as I'm doing test implementing ably, plus when I get the messages from the channel history I don't have thousands of messages, just those I posted. I'm only initialising my client once in the constructor
-I'm using the reactjs framework and host on an azure web app
-
-I am going through a tough time managing the ably connection. I am building a react native application and thought I am the only one testing and building the application, the active connections count sky rockets.
-I have tried specifying clientId while opening connection, calling connection.off while unmount is called, but this is still not helping. Can you please direct me to some document which can help me resolve this issue. It could be the case where I am not doing things right. This appears to be an issue with fast refresh. While things work well when the view is refreshed, hot load causes multiple connections.
-Even unsubscribing the channel in unmount doesn't do anything. Here's a tiny piece of code for you to refer : https://pastebin.com/vKCB1irZ
-
-I’m using hot reload to develop a react app, but it is causing me to use up my ably messages and connection limits. How can I avoid this while in development?
