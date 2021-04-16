@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Ably from "ably/promises";
 
-const client = new Ably.Realtime("you-api-key-here");
+const client = new Ably.Realtime("your-api-key-here");
 
 const Component = (props) => {
 
